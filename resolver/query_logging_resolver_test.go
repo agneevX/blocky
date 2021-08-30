@@ -66,8 +66,8 @@ var _ = Describe("QueryLoggingResolver", func() {
 		When("Configuration with logging per client", func() {
 			BeforeEach(func() {
 				sutConfig = config.QueryLogConfig{
-					Dir:       tmpDir,
-					PerClient: true,
+					Target: tmpDir,
+					Type:   config.QueryLogTypeCSVPerClient,
 				}
 				mockAnswer, _ = util.NewMsgWithAnswer("example.com.", 300, dns.TypeA, "123.122.121.120")
 			})
@@ -110,8 +110,8 @@ var _ = Describe("QueryLoggingResolver", func() {
 		When("Configuration with logging in one file for all clients", func() {
 			BeforeEach(func() {
 				sutConfig = config.QueryLogConfig{
-					Dir:       tmpDir,
-					PerClient: false,
+					Target: tmpDir,
+					Type:   config.QueryLogTypeCSV,
 				}
 				mockAnswer, _ = util.NewMsgWithAnswer("example.com.", 300, dns.TypeA, "123.122.121.120")
 			})
@@ -154,8 +154,8 @@ var _ = Describe("QueryLoggingResolver", func() {
 		When("resolver is enabled", func() {
 			BeforeEach(func() {
 				sutConfig = config.QueryLogConfig{
-					Dir:              tmpDir,
-					PerClient:        true,
+					Target:           tmpDir,
+					Type:             config.QueryLogTypeCSVPerClient,
 					LogRetentionDays: 0,
 				}
 			})
@@ -186,7 +186,10 @@ var _ = Describe("QueryLoggingResolver", func() {
 				var fatal bool
 
 				Log().ExitFunc = func(int) { fatal = true }
-				_ = NewQueryLoggingResolver(config.QueryLogConfig{Dir: "notExists"})
+				_ = NewQueryLoggingResolver(config.QueryLogConfig{
+					Target: "notExists",
+					Type:   config.QueryLogTypeCSV,
+				})
 
 				Expect(fatal).Should(BeTrue())
 			})
@@ -200,12 +203,23 @@ var _ = Describe("QueryLoggingResolver", func() {
 				Log().ExitFunc = func(int) { fatal = true }
 
 				sut := NewQueryLoggingResolver(config.QueryLogConfig{
-					Dir:              "wrongDir",
+					Target:           "wrongDir",
+					Type:             config.QueryLogTypeCSV,
 					LogRetentionDays: 7,
 				}).(*QueryLoggingResolver)
 
 				sut.doCleanUp()
 				Expect(fatal).Should(BeTrue())
+			})
+		})
+		When("fallback logger is enabled, log retention is enabled", func() {
+			It("should do nothing", func() {
+
+				sut := NewQueryLoggingResolver(config.QueryLogConfig{
+					LogRetentionDays: 7,
+				}).(*QueryLoggingResolver)
+
+				sut.doCleanUp()
 			})
 		})
 		When("log directory contains old files", func() {
@@ -222,7 +236,8 @@ var _ = Describe("QueryLoggingResolver", func() {
 				Expect(err).Should(Succeed())
 
 				sut := NewQueryLoggingResolver(config.QueryLogConfig{
-					Dir:              tmpDir,
+					Target:           tmpDir,
+					Type:             config.QueryLogTypeCSV,
 					LogRetentionDays: 7,
 				})
 
